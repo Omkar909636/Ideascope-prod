@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>IdeaScope</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+
+
+
+    <div class="dashboard-layout">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="brand">Idea<span class="accent">Scope</span></div>
+            </div>
+
+            <div class="history-label">HISTORY</div>
+            <div class="history-list">
+                {% for item in history %}
+                <div class="history-item" onclick="loadHistory('{{ item.id }}')">
+                    <div
+                        class="history-score {% if item.score is not none and item.score >= 8 %}score-high{% elif item.score is not none and item.score >= 5 %}score-mid{% else %}score-low{% endif %}">
+                        {{ item.score if item.score is not none else '?' }}
+                    </div>
+                    <div class="history-info">
+                        <div class="history-title">{{ item.title or 'Untitled Idea' }}</div>
+                        <div class="history-date">Idea #{{ item.id }}</div>
+                        <!-- Hidden data storage -->
+                        <textarea id="data-{{ item.id }}" style="display:none;">{{ item.analysis }}</textarea>
+                    </div>
+                </div>
+                {% else %}
+                <div style="padding: 20px; color: #94a3b8; font-size: 14px; text-align: center;">No history yet.</div>
+                {% endfor %}
+            </div>
+
+            <div class="sidebar-footer">
+                {% if is_admin %}
+                <a href="/admin" class="logout-btn" style="color: var(--primary); margin-bottom: 5px;">
+                    <span>⚡</span> Admin Panel
+                </a>
+                {% endif %}
+                <a href="/logout" class="logout-btn">
+                    <span>🚪</span> Log out
+                </a>
+            </div>
+        </div>
+
+        <div class="app main-content">
+            <!-- New Analysis Button (visible if result is showing) -->
+            <button id="newAnalysisBtn" class="secondary" onclick="resetApp()"
+                style="display:none; margin-bottom: 20px;">
+                ← Analyze New Idea
+            </button>
+
+
+
+            <h1>Analyze your next big idea</h1>
+            <p class="sub">Validating startups with investor-grade logic.</p>
+
+            <div id="panel">
+
+                <textarea id="idea" placeholder="Explain your startup idea in detail..."></textarea>
+                <button id="startBtn" onclick="start()"><span>Start Analysis</span></button>
+
+                <!-- Intermission / Intro Step -->
+                <div id="introBox" style="display:none; text-align: center; padding: 40px;">
+                    <div style="font-size: 48px; margin-bottom: 20px;">🤔</div>
+                    <h3>Digging Deeper</h3>
+                    <p style="color: #64748b; margin-bottom: 30px; font-size: 16px; line-height: 1.6;">
+                        To give you the most accurate VC-grade feedback, I need to ask 3 short clarification questions.
+                        <br>You can answer them for better results, or skip ahead if you prefer.
+                    </p>
+                    <div style="display: flex; gap: 10px; justify-content: center;">
+                        <button class="secondary" onclick="skipToAnalysis()" style="margin-top:0;">Skip
+                            Questions</button>
+                        <button onclick="startQuestions()" style="margin-top:0;">Proceed to Questions</button>
+                    </div>
+                </div>
+
+                <div id="questionBox" style="display:none;">
+                    <div class="progress-container">
+                        <div class="progress-bar">
+                            <div id="progressFill" class="progress-fill" style="width:0%"></div>
+                        </div>
+                        <div class="progress-text">
+                            Question <span id="currentQuestion">1</span> of <span id="totalQuestions">3</span>
+                        </div>
+                    </div>
+
+                    <!-- Question Text -->
+                    <h3 id="question" style="margin-bottom: 30px; line-height: 1.5;"></h3>
+
+                    <!-- Added more spacing above textarea via margin-bottom on h3 and styles here -->
+                    <textarea id="answer" placeholder="Your specific answer (Optional)..."
+                        style="min-height:100px; margin-top: 10px;"></textarea>
+
+                    <button onclick="next()"><span>Next Step</span></button>
+                </div>
+
+                <div id="result" style="display:none;">
+
+                    <div class="score-container">
+                        <div class="score-circle">
+                            <svg>
+                                <circle class="score-bg" cx="60" cy="60" r="45"></circle>
+                                <circle id="scoreCircleFill" class="score-fill" cx="60" cy="60" r="45"></circle>
+                            </svg>
+                            <div class="score-text">
+                                <span id="scoreValue" class="score-number">0</span>
+                                <span class="score-max">/ 10</span>
+                            </div>
+                        </div>
+                        <div class="score-info">
+                            <h3 id="scoreMsg">Analyzing...</h3>
+                            <p>Investor Confidence Signal</p>
+                        </div>
+                    </div>
+
+                    <div class="cards-grid">
+                        <div class="card">
+                            <div class="card-icon">📊</div>
+                            <h4>Market</h4>
+                            <p id="market"></p>
+                        </div>
+                        <div class="card">
+                            <div class="card-icon">👥</div>
+                            <h4>Users</h4>
+                            <p id="users"></p>
+                        </div>
+                        <div class="card">
+                            <div class="card-icon">🎯</div>
+                            <h4>Problem</h4>
+                            <p id="problem"></p>
+                        </div>
+                        <div class="card">
+                            <div class="card-icon">⚠️</div>
+                            <h4>Risk</h4>
+                            <p id="risk"></p>
+                        </div>
+                        <div class="card">
+                            <div class="card-icon">🚀</div>
+                            <h4>Strategy</h4>
+                            <p id="suggestion"></p>
+                        </div>
+                    </div>
+
+                    <button class="ghost" onclick="toggle()">📋 Read Full Report</button>
+
+                    <div id="full" class="detailed-analysis" style="display:none;">
+                        <div id="formattedAnalysis" class="analysis-content"></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+        let questions = [], answers = [], index = 0, idea = "";
+
+        function toggle() {
+            let fullDiv = document.getElementById("full");
+            fullDiv.style.display = fullDiv.style.display === "none" ? "block" : "none";
+        }
+
+        async function start() {
+            const ideaInput = document.getElementById("idea");
+            const button = document.getElementById("startBtn");
+
+            // Validation: Empty Input
+            if (!ideaInput.value.trim()) {
+                alert("Please enter a startup idea to analyze.");
+                ideaInput.focus();
+                return;
+            }
+
+            button.disabled = true;
+            button.classList.add("loading");
+
+            idea = ideaInput.value;
+
+            try {
+                let res = await fetch("/questions", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ idea })
+                });
+                let data = await res.json();
+
+                if (data.error) { // handle backend error response
+                    alert(data.error);
+                    button.disabled = false;
+                    button.classList.remove("loading");
+                    return;
+                }
+
+                if (data.unsafe) {
+                    alert(data.message);
+                    button.disabled = false;
+                    button.classList.remove("loading");
+                    return;
+                }
+
+                questions = data.questions;
+                document.getElementById("idea").style.display = "none";
+                document.getElementById("startBtn").style.display = "none";
+
+                // Show Intro Box instead of Question Box directly
+                document.getElementById("introBox").style.display = "block";
+
+            } catch (e) {
+                console.error(e);
+                alert("Something went wrong. Please try again.");
+            } finally {
+                button.disabled = false;
+                button.classList.remove("loading");
+            }
+        }
+
+        function startQuestions() {
+            document.getElementById("introBox").style.display = "none";
+            document.getElementById("questionBox").style.display = "block";
+            show();
+        }
+
+        function skipToAnalysis() {
+            // Fill answers with "Skipped" and proceed
+            answers = ["Skipped", "Skipped", "Skipped"];
+            document.getElementById("introBox").style.display = "none";
+            finishAnalysis();
+        }
+
+        function show() {
+            document.getElementById("question").innerText = questions[index];
+            document.getElementById("answer").value = "";
+            updateProgress();
+        }
+
+        function updateProgress() {
+            const current = index + 1;
+            const total = questions.length;
+            const percentage = (current / total) * 100;
+
+            document.getElementById("currentQuestion").innerText = current;
+            document.getElementById("totalQuestions").innerText = total;
+            document.getElementById("progressFill").style.width = percentage + "%";
+        }
+
+        async function next() {
+            const button = document.querySelector("#questionBox button");
+            button.disabled = true;
+            button.classList.add("loading");
+
+            let ans = document.getElementById("answer").value.trim();
+            if (!ans) ans = "No answer provided.";
+            answers.push(ans);
+            index++;
+
+            if (index < questions.length) {
+                show();
+                button.disabled = false;
+                button.classList.remove("loading");
+            } else {
+                finishAnalysis();
+            }
+        }
+
+        async function finishAnalysis() {
+            // Show loading state on whatever was active (or just a global loader)
+            // If coming from questions, button is already loading. 
+            // If coming from skip, we need to show some loading indication.
+
+            // For simplicity, hide previous boxes and show result with loading state or minimal "Analyzing..." overlay
+            // But since we are reusing the question box for loading in 'next', let's just do the fetch.
+
+            if (document.getElementById("questionBox").style.display === "block") {
+                // already handled by button loading state
+            } else {
+                // Show a loading text in introBox or replace it
+                document.getElementById("introBox").innerHTML = "<h3>Analyzing...</h3><p>Please wait while we generate your report.</p>";
+                document.getElementById("introBox").style.display = "block";
+            }
+
+            try {
+                let res = await fetch("/analyze", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ idea, answers })
+                });
+                let data = await res.json();
+
+                document.getElementById("introBox").style.display = "none";
+                document.getElementById("questionBox").style.display = "none";
+
+                // Build UI from JSON data
+                renderResults(data);
+
+            } catch (e) {
+                console.error(e);
+                alert("Analysis failed.");
+                document.getElementById("introBox").style.display = "none"; // reset or show error
+            } finally {
+                const btn = document.querySelector("#questionBox button");
+                if (btn) {
+                    btn.disabled = false;
+                    btn.classList.remove("loading");
+                }
+            }
+        }
+
+        function renderResults(data) {
+            document.getElementById("result").style.display = "block";
+            document.getElementById("newAnalysisBtn").style.display = "inline-block"; // Show back button
+
+            // Smooth scroll to result
+            document.getElementById("result").scrollIntoView({ behavior: 'smooth' });
+
+            // Score
+            const score = data.score || 0;
+            document.getElementById("scoreValue").innerText = score;
+
+            const circumference = 2 * Math.PI * 45; // r=45
+            const offset = circumference - (score / 10) * circumference;
+            document.getElementById("scoreCircleFill").style.strokeDashoffset = offset;
+
+            // Colorize Score
+            let color = "#ef4444"; // red
+            let msg = "Critical Risks";
+            if (score >= 8) { color = "#22c55e"; msg = "VC Ready"; }
+            else if (score >= 5) { color = "#eab308"; msg = "Needs Work"; }
+
+            document.getElementById("scoreCircleFill").style.stroke = color;
+            document.getElementById("scoreMsg").innerText = msg;
+            document.getElementById("scoreMsg").style.color = color;
+
+            // Cards
+            document.getElementById("market").innerText = data.market || "No data available";
+            document.getElementById("users").innerText = data.users || "No data available";
+            document.getElementById("problem").innerText = data.problem || "No data available";
+            document.getElementById("risk").innerText = data.risk || "No data available";
+            document.getElementById("suggestion").innerText = data.suggestion || "No data available";
+
+            // Detailed Analysis (Markdown)
+            const rawMarkdown = data.detailed_analysis || "No details provided.";
+            document.getElementById("formattedAnalysis").innerHTML = marked.parse(rawMarkdown);
+        }
+
+        function loadHistory(id) {
+            const rawData = document.getElementById("data-" + id).value;
+            try {
+                let data;
+                // Check if data is JSON or just markdown (legacy)
+                if (rawData.trim().startsWith("{")) {
+                    data = JSON.parse(rawData);
+                } else {
+                    // Legacy fallback
+                    data = {
+                        score: 5,
+                        market: "Details in full report",
+                        users: "Details in full report",
+                        problem: "Details in full report",
+                        risk: "Details in full report",
+                        suggestion: "View detailed analysis below",
+                        detailed_analysis: rawData
+                    };
+                }
+
+                // Hide input panels
+                document.getElementById("idea").style.display = "none";
+                document.getElementById("startBtn").style.display = "none";
+                document.getElementById("introBox").style.display = "none";
+                document.getElementById("questionBox").style.display = "none";
+
+                // Render
+                renderResults(data);
+
+            } catch (e) {
+                console.error("Failed to load history item", e);
+                alert("Could not load this history item.");
+            }
+        }
+
+        function resetApp() {
+            // Reload page is easiest to reset state completely
+            window.location.reload();
+        }
+    </script>
+
+</body>
+
+</html>

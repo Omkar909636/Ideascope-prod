@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Login — IdeaScope</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+
+    <div class="wrapper">
+        <div class="auth-box">
+
+            <h2>Welcome back</h2>
+            <p class="sub">Log in to continue thinking about your startup ideas.</p>
+
+            {% if error %}
+            <div class="error">{{ error }}</div>
+            {% endif %}
+
+            <form method="POST">
+                <input type="email" name="email" placeholder="Email" required>
+                <div class="password-container">
+                    <input type="password" name="password" id="password" placeholder="Password" required>
+                    <span class="password-toggle" onclick="togglePassword('password')">👁️</span>
+                </div>
+
+                <button type="submit">Log in</button>
+            </form>
+
+            <script>
+                function togglePassword(id) {
+                    const input = document.getElementById(id);
+                    if (input.type === "password") {
+                        input.type = "text";
+                    } else {
+                        input.type = "password";
+                    }
+                }
+            </script>
+
+            <p class="alt">New to IdeaScope? <a href="/register">Create an account</a></p>
+
+        </div>
+    </div>
+
+</body>
+
+</html>
